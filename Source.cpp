@@ -36,6 +36,17 @@ void operator^=(vector<bool> &a, const vector<bool> &b) {
 		a[i] = a[i] ^ b[i];
 }
 
+// bitwise xor on vectors
+vector<bool> operator^(const vector<bool> &a, const vector<bool> &b) {
+	if (a.size() != b.size())
+		throw runtime_error("string lengths unequal");
+
+	vector<bool> ret(a);
+	for (size_t i = 0; i < a.size(); i++)
+		ret[i] = ret[i] ^ b[i];
+	return ret;
+}
+
 // Counts number of 1s in a vector
 byte norm(const vector<bool> &a) {
 	byte cnt = 0;
@@ -63,6 +74,8 @@ void FillImportantBits(byte size) {
 
 // Marks position of important bits with '|' character
 void PrintImportantBits(byte size) {
+	if (size > 128)
+		return; //for economy space and time
 	for (byte i = 0; i < size; i++) {
 		if (importantBits.count(i) == 1)
 			printf("|");
@@ -74,18 +87,29 @@ void PrintImportantBits(byte size) {
 
 // Prints vector
 void Print(const vector<bool> &a) {
-	for (size_t i = 0; i < a.size(); i++)
-		printf("%d", (int)a[i]);
+	if (a.size() <= 128)
+		for (size_t i = 0; i < a.size(); i++)
+			printf("%d", (int)a[i]);
+
+	else //for economy space and time
+	{
+		byte sum = 0;
+		printf("0x");
+		for (size_t i = 0; i < a.size() / 4; i++) {
+			sum = (a[a.size() - (i*4 + 0) - 1] << 0)
+				+ (a[a.size() - (i*4 + 1) - 1] << 1)
+				+ (a[a.size() - (i*4 + 2) - 1] << 2)
+				+ (a[a.size() - (i*4 + 3) - 1] << 3);
+			printf("%X", sum);
+		}
+	}
 }
 
 // Finds the smallest Hamming distance of testcode from all of the codewords in H[N]
 byte codematch(const vector<vector<bool> > &cw, const vector<byte> &map, const vector<bool> &testcode, bool diagnotics) {
 	byte pos = 0, bestdist = (byte)testcode.size(), dist;
-	vector<bool> tmp;
 	for (size_t i = 0; i < cw.size(); i++) {
-		tmp = cw[map[i]];
-		tmp ^= testcode;						//bitwise xor
-		dist = norm(tmp);
+		dist = norm(cw[map[i]] ^ testcode);
 		if (dist < bestdist) {
 			bestdist = dist; pos = (byte)i;
 		}
@@ -124,72 +148,69 @@ vector<vector<bool> > getAllH(byte deep) {
 	return ret;
 }
 
-// Generates recursively all bit masks for a specific length like :
-// 000001      OR 000011 000110 001100 011000 110000
-// 000010         000101 001010 010100 101000
-// 000100         001001 010010 100100 ----->
-// 001000         010001 100010 ----->
-// 010000         100001 ----->
-// 100000         ----->
-// For length 1   For length 2 .... and so on
-void generateMasks(vector<vector<bool> > &masks, byte len, byte size, vector<bool> &cur, byte start = 0) {
-	if (len == 0) {
-		masks.push_back(cur);
-		return;
+// Generates recursively mask tree like :
+// before () - index of node
+// in () first - index of parent, second - number of new bit
+// after () correlation to a specific mask
+// 0(-1, 0)000001     0(-1, 0)000001  6(0, 1)000011 11(1, 2)000110 15(2, 3)001100 18(3, 4)011000 20(4, 5)110000
+// 1(-1, 1)000010     1(-1, 1)000010  7(0, 2)000101 12(1, 3)001010 16(2, 4)010100 19(3, 5)101000
+// 2(-1, 2)000100     2(-1, 2)000100  8(0, 3)001001 12(1, 4)010010 17(2, 5)100100 ------------->
+// 3(-1, 3)001000     3(-1, 3)001000  9(0, 4)010001 14(1, 5)100010 ------------->
+// 4(-1, 4)010000     4(-1, 4)010000 10(0, 5)100001 ------------->
+// 5(-1, 5)100000     5(-1, 5)100000 ------------->
+//                    ------------->
+// For len1, size 6   For length 2, size 6 and so on ...
+//
+// For lenN, size N there are 2^N masks
+pair<byte, byte> generateTreeMasks(vector<pair<byte, byte> > &masks, byte len, byte size, byte parrent, byte start) {
+	byte index, count = 0;
+	if (len == 1) {
+		index = (byte)masks.size();
+		count = size - start;
+		for (byte i = start; i < size; i++)
+			masks.push_back(make_pair(parrent, i));
+		return make_pair(count, index); // return number of pairs and index of the first one
 	}
-	for (byte i = start; i < cur.size(); i++) {
-		cur[i] = 1;
-		generateMasks(masks, len - 1, size, cur, i + 1);
-		cur[i] = 0;
+	pair<byte, byte> prev = generateTreeMasks(masks, len - 1, size, parrent, start);
+	index = (byte)masks.size();
+	for (byte i = 0; i < prev.first; i++) {
+		count += generateTreeMasks(masks, 1, size, prev.second + i, masks[prev.second + i].second + 1).first;
 	}
+	return make_pair(count, index); // return number of pairs and index of the first one
 }
 
-// Generates all bit masks of all lengths [0..size]
-vector<vector<bool> > generateAllMasks(byte size) {
-	vector<vector<bool> > ret;
-	vector<bool> empty;
-	for (byte i = 0; i <= size; i++) {
-		empty.clear();
-		empty.resize(size);
-		generateMasks(ret, i, 6, empty);
-	}
+// Frame for generateTreeMasks()
+vector<pair<byte, byte> > generateAllMasks(byte size) {
+	vector<pair<byte, byte> > ret;
+	ret.push_back(make_pair(-1, -1)); // represent mask 000..0
+	generateTreeMasks(ret, size, size, -1, 0);
 	return ret;
 }
 
+// Get code word recursivly if not found previously
+const vector<bool> getCodeWord(const vector<pair<byte, byte> > &masks, byte index, const vector<vector<bool> > &h, vector<vector<bool> > &res) {
+	if (res[index].size() > 0)
+		return res[index];
+	if (masks[index].first == -1)
+		return h[masks[index].second + 1];
+
+	return getCodeWord(masks, masks[index].first, h, res) ^ h[masks[index].second + 1]; //bitwise xor
+}
+
 // Maps H[N] to all code words
-// This function is the slowest (For N>10 it's quite clear delay and for n=13 it's already several minutes)
-// Some multithreading is required(maybe devide outer loop into threads)
-vector<vector<bool> > mapCodewordsUsingMasks(const vector<vector<bool> > &masks, const vector<vector<bool> > &h) {
-	vector<vector<bool> > ret;
-	for (size_t i = 0; i < masks.size(); i++) {
-		ret.push_back(vector<bool>(h[0].size()));
-		for (size_t j = 0; j < masks[i].size(); j++) {
-			if (masks[i][j] == 1)
-				ret.back() ^= h[j + 1];					//bitwise xor
-		}
-	}
+vector<vector<bool> > mapCodewordsUsingMasks(const vector<pair<byte, byte> > &masks, const vector<vector<bool> > &h) {
+	vector<vector<bool> > ret(masks.size());
+	for (size_t i = 0; i < masks.size(); i++)
+		ret[i] = getCodeWord(masks, i, h, ret);
+	//ret.insert(ret.begin(), h[0]);
 	return ret;
 }
 
 // Determines which number corresponds to which word
-// Improvements is required
-// For now complexity is O(cw.size() ^ 2) (was N^3 :) but I saw that msgval(cw[i]) can be calculated once)
-// Maybe some removal when found
 vector<byte> GenetateMapping(const vector<vector<bool> > &cw) {
 	vector<byte> ret(cw.size());
-	vector<byte> val(cw.size());
 	for (size_t i = 0; i < cw.size(); i++)
-		val[i] = msgval(cw[i]);
-	byte k;
-	for (size_t i = 0; i < cw.size(); i++) {
-		for (size_t j = 0; j < cw.size(); j++) {
-			if (i == val[j]) {
-				k = (byte)j;
-				break;
-			}
-		}
-		ret[i] = k;
-	}
+		ret[msgval(cw[i])] = i;
 	return ret;
 }
 
@@ -199,7 +220,9 @@ int main() {
 
 	printf("Welcome to the H[n] (Reed-Muller) test suite\nEnter the n (4 <= n <= 6)\n\
 [3 is to small 7 doesn't fit in console but you could try uncomment freopen to switch output to file]\n\
-[[For n = 13 program genereted file 134MB big and worked about 5 mins !!!!]]\n : ");
+[[For n = 15 program allocated 280MB in memory, genereted file 525MB big! and worked about 2 minutes! \
+For 95%% of the time it was writting the result]]\n\
+[[[Size and number of code words is proportional to 2^N so be carefull]]]\n : ");
 #ifdef _DEBUG
 	n = 5;
 #else
@@ -207,8 +230,8 @@ int main() {
 		return 0;
 #endif
 
-	printf("Eneter number of random tests k\n\
-[again, if you are not using file probably stick to a small number] : ");
+	printf("\nEneter number of random tests k\n\
+[again, if you are not using file probably stick to a small number]\n : ");
 #ifdef _DEBUG
 	tests = 5;
 #else
@@ -216,11 +239,11 @@ int main() {
 		return 0;
 #endif
 
-	//freopen("output.txt", "w", stdout);
+	freopen("output.txt", "w", stdout);
 
 	vector<vector<bool> > H = getAllH(n);
-	vector<vector<bool> > masks = generateAllMasks((byte)H.size() - 1);
-	vector<vector<bool> > cw = mapCodewordsUsingMasks(masks, H);
+	vector<pair<byte, byte> > masksTree = generateAllMasks((byte)H.size() - 1);
+	vector<vector<bool> > cw = mapCodewordsUsingMasks(masksTree, H);
 	vector<byte> map = GenetateMapping(cw);
 
 	printf("\nHere are the H[%d] codewords in ascending order of message bit values \n| - corresponds to information bits\n\n", n);
@@ -231,9 +254,13 @@ int main() {
 		printf(" - %d\n", i);
 	}
 
-	printf("\nHere are the %d values contained in msg bits at posns 1, 2, 4, 8, 16, 32, ...\n", cw.size());
-	for (size_t i = 0; i < cw.size(); i++)
+	printf("\nTest. %d values should be in the ascending order\n", cw.size());
+	int sq = (int)sqrt(cw.size());
+	for (size_t i = 0; i < cw.size(); i++) {
 		printf("%d ", msgval(cw[map[i]]));
+		if ((i + 1) % sq == 0)
+			printf("\n");
+	}
 
 	printf("\n\n");
 	vector<bool> random;
