@@ -239,7 +239,7 @@ For 95%% of the time it was writting the result]]\n\
 		return 0;
 #endif
 
-	freopen("output.txt", "w", stdout);
+	//freopen("output.txt", "w", stdout);
 
 	vector<vector<bool> > H = getAllH(n);
 	vector<pair<byte, byte> > masksTree = generateAllMasks((byte)H.size() - 1);
