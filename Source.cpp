@@ -284,13 +284,13 @@ For 95%% of the time it was writting the result]]\n\
 
 
 #ifdef _OldTestingFromVideo
-    vector<byte> test63 = { 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1 };
-    vector<byte> test15 = { 0,0,1,1,0,0,1,1,0,0,1,1,0,0,1,1,0,0,1,1,0,0,1,1,0,0,1,1,0,0,1,1 }; //roughly at pos15
-    vector<byte> test48 = { 1,1,0,0,1,1,0,0,1,1,0,0,1,1,0,0,1,1,0,0,1,1,0,0,1,1,0,0,1,1,0,0 };
+    vector<byte> test63    = { 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1 };
+    vector<byte> test15    = { 0,0,1,1,0,0,1,1,0,0,1,1,0,0,1,1,0,0,1,1,0,0,1,1,0,0,1,1,0,0,1,1 }; //roughly at pos15
+    vector<byte> test48    = { 1,1,0,0,1,1,0,0,1,1,0,0,1,1,0,0,1,1,0,0,1,1,0,0,1,1,0,0,1,1,0,0 };
     vector<byte> newtest48 = { 1,0,0,0,1,1,0,0,1,0,0,1,1,1,0,0,1,1,0,0,0,0,0,0,1,1,0,0,1,1,0,0 }; // roughly at 48 but 5 bits damaged
-    vector<byte> test0 = { 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 }; //zero vector undamaged
-    vector<byte> newtest0 = { 0,0,1,0,0,0,0,1,0,0,0,1,1,0,0,0,0,0,0,1,0,0,0,0,1,0,0,0,0,0,0,1 }; //zero vector but damaged in 7 places
-    vector<byte> random = { 1,0,1,1,1,0,0,1,0,1,0,0,0,1,1,0,1,0,0,0,1,1,0,0,0,1,0,1,0,1,0,0 }; // random string of 0s and 1s
+    vector<byte> test0     = { 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 }; //zero vector undamaged
+    vector<byte> newtest0  = { 0,0,1,0,0,0,0,1,0,0,0,1,1,0,0,0,0,0,0,1,0,0,0,0,1,0,0,0,0,0,0,1 }; //zero vector but damaged in 7 places
+    vector<byte> random    = { 1,0,1,1,1,0,0,1,0,1,0,0,0,1,1,0,1,0,0,0,1,1,0,0,0,1,0,1,0,1,0,0 }; // random string of 0s and 1s
 
     //for (size_t i = 0; i < cw.size(); i++)
     //	printf("i = %d dist = %d\n", i, norm(rowxor(cw[map[i]], newtest48)));
